@@ -1,24 +1,10 @@
 from dotenv import load_dotenv
 from fasthtml.common import *
-from starlette.websockets import WebSocketState
 from graph import getAgent
-from datetime import datetime
-import shortuuid,asyncio
+import shortuuid
 
 load_dotenv()
-from fasthtml.components import Zero_md, Script
-
-
-# persistent storage of chat sessions
-db = database("data/curiosity.db")
-chats = db.t.chats
-if chats not in db.t:
-    chats.create(id=str, title=str, updated=datetime, pk="id")
-ChatDTO = chats.dataclass()
-
-
-
-# Set up the app, including daisyui and tailwind for the chat component
+from fasthtml.components import Script
 
 
 app, rt = fast_app(
@@ -32,16 +18,10 @@ app, rt = fast_app(
 )
 
 
-def question_list():
-    return Details(
-        Ul(*chats(order_by="updated DESC"), dir="rtl"),
-        id="question-list",
-        cls="dropdown",
-        hx_swap_oob="true",
-    )
+
 def navigation():
     navigation = Nav(
-        Ul(Li(Hgroup(H3("FastGraph"), P("A Plan-and-search demo with Langgraph and FastHTML."))))
+        Ul(Li(Hgroup(("FastGraph - A Plan-and-search demo with Langgraph and FastHTML."))))
     )
     return navigation
 
@@ -57,7 +37,7 @@ def ChatMessage(msg_idx, **kwargs):
     return Div(
         Div(msg["role"], cls="chat-header"),
         Div(
-            Zero_md(css_template, Script(msg["content"], type="text/markdown")),
+            msg["content"],
             id=f"chat-content-{msg_idx}",  # Target if updating the content
             cls=f"chat-bubble {bubble_class}",
         ),
@@ -66,9 +46,6 @@ def ChatMessage(msg_idx, **kwargs):
         **kwargs,
     )
 
-
-# The input field for the user message. Also used to clear the
-# input field after sending a message via an OOB swap
 def ChatInput():
     return Input(
         type="text",
@@ -80,27 +57,6 @@ def ChatInput():
     )
 
 
-# The main screen
-@app.route("/")
-def get():
-    page = Body(
-        navigation(),
-        Div(
-            *[ChatMessage(msg) for msg in messages],
-            id="chatlist",
-            cls="chat-box h-[73vh] overflow-y-auto",
-        ),
-        Form(
-            Group(ChatInput(), Button("Send", cls="btn btn-primary")),
-            ws_send="",
-            hx_ext="ws",
-            ws_connect="/ws_connect",
-            cls="flex space-x-2 mt-2",
-        ),
-        cls="p-4 max-w-lg mx-auto",
-    )  # Open a websocket connection on page load
-    return page
-
 @rt("/")
 async def get():
     return RedirectResponse(url=f"/chat/{shortuuid.uuid()}")
@@ -108,52 +64,50 @@ async def get():
 
 @rt("/chat/{id}")
 async def get(id: str):
-
-    body = Body(
-        cls="container",
-        hx_ext="ws",
-        ws_connect="/ws_connect",
+    page = Body(
+        navigation(),
+        Div(
+            *[ChatMessage(msg) for msg in messages],
+            id="chatlist",
+            cls="h-[73vh] overflow-y-auto",
+        ),
+        Form(
+            Group(ChatInput(),
+                  Input(
+                      type="text",
+                      name='id',
+                      id='id-input',
+                      value=id,
+                      cls='hidden'
+                  ),
+                  Button("Send", cls="btn btn-primary")),
+            ws_send="",
+            hx_ext="ws",
+            ws_connect="/ws_connect",
+            cls="flex space-x-2 mt-2",
+        ),
+        cls="p-4 max-w-6xl mx-auto",
     )
-    return Title("Plan-and-Search"), body
+    return  page
 
-
-async def on_connect(send):
-    ws_connections[send.args[0].client] = send
-    print(f"WS    connect: {send.args[0].client}, total open: {len(ws_connections)}")
-
-
-async def on_disconnect(send):
-    global ws_connections
-    ws_connections = {
-        key: value
-        for key, value in ws_connections.items()
-        if send.args[0].client_state == WebSocketState.CONNECTED
-    }
-    print(f"WS disconnect: {send.args[0].client}, total open: {len(ws_connections)}")
-
-# WebSocket connection bookkeeping
-ws_connections = {}
-
-@app.ws("/ws_connect", conn=on_connect, disconn=on_disconnect)
-async def ws(msg: str, send):
-    await update_chat(msg, send)
-
+@app.ws("/ws_connect")
+async def ws(msg: str,id:str,send):
+    await update_chat(msg,id,send)
 
 messages = []
-async def update_chat(msg: str, send):
+async def update_chat(msg: str,id:str,send):
     messages.append({"role": "user", "content": msg})
-
     # Send the user message to the user (updates the UI right away)
     await send(
         Div(ChatMessage(len(messages) - 1), hx_swap_oob="beforeend", id="chatlist")
     )
 
     # Send the clear input field command to the user
-    await send(ChatInput())
+    await send(msg)
 
     # Model response (streaming)
     agent = getAgent()
-    stream = agent.astream_events({"messages": messages, "past_steps": ""},version="v1",config={"recursion_limit": 10,"configurable": {"thread_id": "1"}})
+    stream = agent.astream_events({"messages": messages, "past_steps": ""},version="v1",config={"recursion_limit": 10,"configurable": {"thread_id": id}})
 
     # Send an empty message with the assistant response
     messages.append({"role": "assistant", "content": ""})

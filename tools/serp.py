@@ -3,7 +3,6 @@ from duckduckgo_search import DDGS
 def search(keywords: str) -> list:
     with DDGS() as ddgs:
         results = ddgs.text( keywords, max_results=3)
-        print(results)
         return results
 
 def serpResult2md(results:list) -> str:
