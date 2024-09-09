@@ -55,7 +55,7 @@ def getAgent():
     graph_builder.add_edge("serpTool", "decisionNode")
     graph_builder.add_conditional_edges("decisionNode", should_loop)
 
-    conn = aiosqlite.connect('memory/checkpoint.db', check_same_thread=False)
+    conn = aiosqlite.connect('database/checkpoint.db', check_same_thread=False)
     memory = AsyncSqliteSaver(conn)
     app = graph_builder.compile(checkpointer=memory)
     return app
