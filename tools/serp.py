@@ -1,7 +1,7 @@
 from duckduckgo_search import DDGS
 
 def search(keywords: str) -> list:
-    with DDGS(proxy='http://127.0.0.1:7890') as ddgs:
+    with DDGS() as ddgs:
         results = ddgs.text( keywords, max_results=3)
         return results
 
