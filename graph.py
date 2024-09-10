@@ -34,6 +34,7 @@ def getAgent():
         answer,nextPlan = decision_maker.thinkNanswer(
             input=state['messages'][-1].content,
             plan=str(state['plan']),
+            current_plan = state['next_plan'],
             past_steps=serp.serpResult2md(state['past_steps']))
         if nextPlan is None:
             state['messages'].append({'role':'assistant','content':answer})
