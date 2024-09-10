@@ -139,6 +139,7 @@ async def update_chat(msg: str,id:str,send):
     agent = getAgent()
     stream = agent.astream_events({"messages": messages, "past_steps": ""},version="v1",config={"recursion_limit": 10,"configurable": {"thread_id": id}})
 
+    past_steps = []
     reply=""
     # Send an empty message with the assistant response
     messages.append({"role": "assistant", "content": ""})
@@ -149,19 +150,27 @@ async def update_chat(msg: str,id:str,send):
 
     # Fill in the message content
     async for event in stream:
-        kind = event["event"]
-        if kind == "on_chat_model_stream":
+        if  event["event"] == "on_chat_model_stream":
             chunk = event["data"]["chunk"].content
             reply+=chunk
             await send(
                 Span(chunk, id=f"chat-content-{len(messages)-1}", hx_swap_oob="beforeend")
             )
+        elif event['event'] == 'on_chain_end' and 'metadata' in event:
+            try:
+                past_steps = event['data']['input']['past_steps']
+            except:
+                pass
+
     chat.title = messages[0]["content"]
     chat.created = datetime.now()
     chat.id = id
-    messages[-1]["content"] = reply
+    messages[-1]["content"] = reply+'\n\n'+"\n".join(f"- [{step['title']}]({step['href']})" for step in past_steps)
     chat.messages = messages
     chats.upsert(chat)
+    await send(
+        Span(messages[-1]["content"], id=f"chat-content-{len(messages)-1}", hx_swap_oob="true")
+    )
     await send(
         Div(A(chat.title, href=f"/chat/{chat.id}"), P(chat.created, cls='text-xs'), cls='py-1',hx_swap_oob="beforeend", id="chats")
     )

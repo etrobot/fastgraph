@@ -4,10 +4,15 @@ from langchain_openai import ChatOpenAI
 #prompt
 plannerPrompt:str = """
 For the given object, make a group of keywords for the search engine. \
-for example, the object is "write a wiki for google.com",and the keywors group should be\
-["google.com funciton","google.com history","google.com tech stack","google.com bussiness mode"],Must output in python list format. Finish it well and I will tip you $100.
+for example, the object is "write a wiki for google.com",and the keywors group should be in list format: \
+["google.com funciton","google.com history","google.com tech stack","google.com bussiness mode"]
+
 Here's the object: 
+
 {object}
+
+Finish it well and I will tip you $100.
+
 """
 
 #output parser
