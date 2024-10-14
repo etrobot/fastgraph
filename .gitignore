@@ -163,3 +163,4 @@ cython_debug/
 /.sesskey
 *.db-shm
 *.db-wal
+.DS_Store

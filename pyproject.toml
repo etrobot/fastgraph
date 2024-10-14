@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "a demo for making a AI search engine using fasthtml and langgraph"
 authors = ["Frank Lin <etrobot@outlook.com>"]
 readme = "README.md"
+packages = [
+    { include = "agents" },{ include = "tools" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -13,7 +16,7 @@ langchain-openai = "^0.1.23"
 duckduckgo-search = "^6.2.11"
 notion-client = "^2.2.1"
 python-fasthtml = "^0.5.1"
-langgraph-checkpoint-sqlite = "^1.0.3"
+langgraph-checkpoint-sqlite = "^2.0.0"
 shortuuid = "^1.0.13"
 aiosqlite = "^0.20.0"
 
